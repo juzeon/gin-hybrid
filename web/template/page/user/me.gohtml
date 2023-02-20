@@ -1,0 +1,21 @@
+{{define "head"}}
+    {{template "marked"}}
+{{end}}
+
+<div id="page">
+    {{define "page"}}
+        <p>Hello user of ID: {{.user.UserID}}</p>
+        <p>Role: {{.user.RoleName}}</p>
+        <p>Login Time: {{.user.LoginTime | ago}}</p>
+    {{end}}
+</div>
+
+{{define "script"}}
+    <script>
+        createApp({
+            data() {
+                return {}
+            },
+        }).mount("#page")
+    </script>
+{{end}}

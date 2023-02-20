@@ -1,0 +1,12 @@
+a {
+    all: unset;
+    cursor: pointer;
+}
+
+.swal2-container {
+    z-index: 1000000;
+}
+
+[v-cloak] {
+    display: none;
+}

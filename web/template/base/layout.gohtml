@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="zh" lang="zh">
+<head>
+    <meta name="renderer" content="webkit"/>
+    <meta http-equiv="Content-Type" content="text/html;charset=utf-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1"/>
+    <meta name="keywords" content="{{.keywords}}"/>
+    <meta name="description" content="{{.description}}"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.2.2/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vue/3.2.45/vue.global.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vuetify/3.0.6/vuetify.min.css"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/vuetify/3.0.6/vuetify.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/limonte-sweetalert2/11.6.16/sweetalert2.all.min.js"></script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qs/6.11.0/qs.min.js" async></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastify-js/1.12.0/toastify.min.js" async></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastify-js/1.12.0/toastify.min.css"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.7/dayjs.min.js" async></script>
+
+    {{block "head" .}}
+    {{end}}
+
+    <script src="/static/js/helper.js?t={{now | unixEpoch}}"></script>
+    <script src="/static/js/app_axios.js?t={{now | unixEpoch}}"></script>
+    <link href="/static/style/layout.css?t={{now | unixEpoch}}" rel="stylesheet">
+    <title>{{.title}}</title>
+</head>
+<body>
+<div id="app">
+    <v-app v-cloak>
+        <v-app-bar color="primary" class="px-3">
+            <v-spacer></v-spacer>
+            {{if not .user}}
+                <a href="/user/login">
+                    <v-btn variant="text">Login</v-btn>
+                </a>
+            {{else}}
+                <span>Already Logged In</span>
+            {{end}}
+        </v-app-bar>
+        <v-main>
+            <v-container style="min-height: 70vh">
+                {{template "page" .}}
+            </v-container>
+        </v-main>
+    </v-app>
+</div>
+<script>
+    let pageVueOptions
+
+    // dummy function for pages
+    function createApp(options) {
+        pageVueOptions = options
+        return {
+            mount(str) {
+            }
+        }
+    }
+</script>
+{{template "script" .}}
+<script>
+    const {ref, computed} = Vue
+    const {createVuetify, useDisplay} = Vuetify
+
+    const vuetify = createVuetify({
+        theme: {
+            themes: {
+                light: {
+                    dark: false,
+                    colors: {
+                        primary: '#ee6e73',
+                        secondary: '#f18488',
+                        accent: '#FF5252',
+                        error: '#f44336',
+                        info: '#2196F3',
+                        success: '#4CAF50',
+                        warning: '#FFC107',
+                    }
+                }
+            }
+        }
+    })
+
+    Vue.createApp({
+        setup() {
+            const {width} = useDisplay()
+            let mobile = computed(() => width.value <= 960)
+            let navDrawer = ref(!mobile.value)
+            let showUserMenu = ref(false)
+            let showManageMenu = ref(false)
+            let goToIndex = () => {
+                window.location.href = '/'
+            }
+            let goToLogin = () => {
+                window.location.href = '/user/login'
+            }
+            return {
+                mobile, navDrawer, showUserMenu, goToIndex, showManageMenu, goToLogin
+            }
+        },
+        delimiters: ['${', '}'],
+        ...pageVueOptions
+    }).use(vuetify).mount('#app')
+</script>
+
+<link href="https://npm.elemecdn.com/@mdi/font@6.x/css/materialdesignicons.min.css" rel="stylesheet">
+
+</body>
+</html>

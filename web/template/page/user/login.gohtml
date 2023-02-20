@@ -1,0 +1,53 @@
+{{define "head"}}
+{{end}}
+
+<div id="page">
+    {{define "page"}}
+        <div class="d-flex justify-center">
+            <v-card min-width="400">
+                <v-card-item>
+                    <v-card-title class="text-center text-h5 my-3">Login</v-card-title>
+                </v-card-item>
+                <v-card-text>
+                    <v-text-field label="Username" v-model="inputUsername"></v-text-field>
+                    <v-text-field label="Password" type="password" v-model="inputPassword"
+                                  @keyup.enter="login"></v-text-field>
+                    <div class="d-flex justify-space-around">
+                        <v-btn color="primary" @click="login" :loading="loading">Login</v-btn>
+                    </div>
+                </v-card-text>
+            </v-card>
+        </div>
+    {{end}}
+</div>
+
+{{define "script"}}
+    <script>
+        createApp({
+            data() {
+                return {
+                    inputUsername: '',
+                    inputPassword: '',
+                    loading: false,
+                }
+            },
+            mounted() {
+
+            },
+            methods: {
+                async login() {
+                    this.loading = true
+                    api.post('user/login', Qs.stringify({
+                        username: this.inputUsername,
+                        password: this.inputPassword
+                    })).then(res => {
+                        helper.toast.simple('Login successfully')
+                        window.location.href = '/user/me'
+                    }).finally(() => {
+                        this.loading = false
+                    })
+                },
+            }
+        }).mount("#page")
+    </script>
+{{end}}

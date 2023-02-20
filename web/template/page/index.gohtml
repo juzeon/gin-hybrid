@@ -1,0 +1,17 @@
+{{template "layout"}}
+
+<div id="page">
+    {{define "page"}}
+    Welcome to Gin Hybrid!
+    {{end}}
+</div>
+
+{{define "script"}}
+<script>
+    createApp({
+        data() {
+            return {}
+        },
+    }).mount("#page")
+</script>
+{{end}}
