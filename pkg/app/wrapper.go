@@ -3,6 +3,8 @@ package app
 import (
 	"gin-hybrid/data/dto"
 	"github.com/gin-gonic/gin"
+	"runtime"
+	"strconv"
 )
 
 type Result struct {
@@ -53,6 +55,10 @@ func (w Wrapper) Success(data interface{}) Result {
 	}
 }
 func (w Wrapper) Error(msg string) Result {
+	_, file, n, ok := runtime.Caller(1)
+	if ok {
+		msg = msg + "; file: " + file + "; line: " + strconv.Itoa(n)
+	}
 	return Result{
 		Code:    -1,
 		Msg:     msg,
@@ -61,6 +67,10 @@ func (w Wrapper) Error(msg string) Result {
 	}
 }
 func (w Wrapper) ErrorWithCode(code int, msg string) Result {
+	_, file, n, ok := runtime.Caller(1)
+	if ok {
+		msg = msg + "; file: " + file + "; line: " + strconv.Itoa(n)
+	}
 	return Result{
 		Code:    code,
 		Msg:     msg,
