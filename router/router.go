@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type APIRouter struct {
@@ -43,12 +44,14 @@ func RegisterAPIRouters(apiRouters []APIRouter, g *gin.RouterGroup) {
 		commonHandler := func(ctx *gin.Context) {
 			aw := app.NewWrapper(ctx)
 			var result app.Result
+			t := time.Now()
 			for _, handler := range apiRouter.Handlers {
 				result = handler(aw)
 				if !result.IsSuccessful() {
 					break
 				}
 			}
+			result.Duration = time.Now().Sub(t)
 			ctx.JSON(result.GetResponseCode(), result)
 		}
 		switch apiRouter.Method {
@@ -71,8 +74,10 @@ func RegisterWebRouters(webRouters []WebRouter, e *gin.Engine) {
 		webRouterNameArr := strings.Split(webRouter.Name, "/")
 		templateName := webRouterNameArr[len(webRouterNameArr)-1]
 		webRouterHandler := func(ctx *gin.Context) {
+			t := time.Now()
 			renderMap := map[string]any{}
 			var result app.Result
+			var firstAPIResult app.Result
 			aw := app.NewWrapper(ctx)
 
 			// call APIs specified by templates
@@ -88,6 +93,7 @@ func RegisterWebRouters(webRouters []WebRouter, e *gin.Engine) {
 					return
 				}
 				if ix == 0 {
+					firstAPIResult = result
 					renderMap["d"] = result.Data
 					renderMap["code"] = result.Code
 					renderMap["msg"] = result.Msg
@@ -129,7 +135,12 @@ func RegisterWebRouters(webRouters []WebRouter, e *gin.Engine) {
 				webRouter.Process(renderMap)
 			}
 
-			ctx.HTML(200, templateName+".gohtml", renderMap)
+			renderMap["duration"] = time.Now().Sub(t)
+			if firstAPIResult.Redirect.Code != 0 {
+				ctx.Redirect(firstAPIResult.Redirect.Code, firstAPIResult.Redirect.Location)
+			} else {
+				ctx.HTML(200, templateName+".gohtml", renderMap)
+			}
 		}
 		relativePath := "/" + webRouter.Name
 		if webRouter.OverwritePath != "" {

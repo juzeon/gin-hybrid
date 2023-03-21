@@ -4,14 +4,22 @@ import (
 	"gin-hybrid/data/dto"
 	"github.com/gin-gonic/gin"
 	"runtime"
-	"strconv"
+	"time"
 )
 
 type Result struct {
-	Code    int         `json:"code"`
-	Msg     string      `json:"msg,omitempty"`
-	Data    interface{} `json:"data,omitempty"`
-	wrapper *Wrapper
+	Code     int           `json:"code"`
+	Msg      string        `json:"msg,omitempty"`
+	Line     int           `json:"line,omitempty"`
+	File     string        `json:"file,omitempty"`
+	Data     interface{}   `json:"data,omitempty"`
+	Duration time.Duration `json:"duration,omitempty"`
+	wrapper  *Wrapper
+	Redirect redirect `json:"-"`
+}
+type redirect struct {
+	Code     int
+	Location string
 }
 
 func (r Result) SendJSON() {
@@ -38,6 +46,16 @@ func NewWrapper(c *gin.Context) *Wrapper {
 	return &Wrapper{Ctx: c}
 }
 
+func (w Wrapper) Redirect(url string, isPermanent bool) Result {
+	code := 302
+	if isPermanent {
+		code = 301
+	}
+	return Result{Code: 0, Redirect: redirect{
+		Code:     code,
+		Location: url,
+	}}
+}
 func (w Wrapper) OK() Result {
 	return Result{
 		Code:    0,
@@ -55,25 +73,23 @@ func (w Wrapper) Success(data interface{}) Result {
 	}
 }
 func (w Wrapper) Error(msg string) Result {
-	_, file, n, ok := runtime.Caller(1)
-	if ok {
-		msg = msg + "; file: " + file + "; line: " + strconv.Itoa(n)
-	}
+	_, file, n, _ := runtime.Caller(1)
 	return Result{
 		Code:    -1,
 		Msg:     msg,
+		Line:    n,
+		File:    file,
 		Data:    nil,
 		wrapper: &w,
 	}
 }
 func (w Wrapper) ErrorWithCode(code int, msg string) Result {
-	_, file, n, ok := runtime.Caller(1)
-	if ok {
-		msg = msg + "; file: " + file + "; line: " + strconv.Itoa(n)
-	}
+	_, file, n, _ := runtime.Caller(1)
 	return Result{
 		Code:    code,
 		Msg:     msg,
+		Line:    n,
+		File:    file,
 		Data:    nil,
 		wrapper: &w,
 	}
