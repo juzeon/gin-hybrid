@@ -8,14 +8,15 @@ import (
 )
 
 type Result struct {
-	Code     int           `json:"code"`
-	Msg      string        `json:"msg,omitempty"`
-	Line     int           `json:"line,omitempty"`
-	File     string        `json:"file,omitempty"`
-	Data     interface{}   `json:"data,omitempty"`
-	Duration time.Duration `json:"duration,omitempty"`
-	wrapper  *Wrapper
-	Redirect redirect `json:"-"`
+	Code                int           `json:"code"`
+	Msg                 string        `json:"msg,omitempty"`
+	Line                int           `json:"line,omitempty"`
+	File                string        `json:"file,omitempty"`
+	Data                interface{}   `json:"data,omitempty"`
+	Duration            time.Duration `json:"duration,omitempty"`
+	wrapper             *Wrapper
+	ResponseContentType string   `json:"-"`
+	Redirect            redirect `json:"-"`
 }
 type redirect struct {
 	Code     int
@@ -62,6 +63,15 @@ func (w Wrapper) OK() Result {
 		Msg:     "",
 		Data:    nil,
 		wrapper: &w,
+	}
+}
+func (w Wrapper) SuccessWithRawData(data []byte, contentType string) Result {
+	return Result{
+		Code:                0,
+		Msg:                 "",
+		Data:                data,
+		wrapper:             &w,
+		ResponseContentType: contentType,
 	}
 }
 func (w Wrapper) Success(data interface{}) Result {
