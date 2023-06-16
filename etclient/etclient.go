@@ -59,17 +59,3 @@ func keepAliveThread() {
 func withKeyNamespace(key string) string {
 	return "/" + namespace + "/" + key
 }
-func GetRawKey(key string, opts ...clientv3.OpOption) (string, error) {
-	resp, err := client.Get(context.Background(), withKeyNamespace(key), opts...)
-	if err != nil {
-		return "", err
-	}
-	if len(resp.Kvs) == 0 {
-		return "", ErrNotExist
-	}
-	return string(resp.Kvs[0].Value), nil
-}
-func PutRawKeyWithLease(key string, value string, opts ...clientv3.OpOption) error {
-	_, err := client.Put(context.Background(), withKeyNamespace(key), value, opts...)
-	return err
-}

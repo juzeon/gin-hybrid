@@ -3,6 +3,8 @@ package conf
 import (
 	"gin-hybrid/etclient"
 	"github.com/BurntSushi/toml"
+	clientv3 "go.etcd.io/etcd/client/v3"
+	"log"
 )
 
 type Init struct {
@@ -51,5 +53,23 @@ func LoadConfig(name string, target any) error {
 	if err != nil {
 		return err
 	}
+	go watchConfigThread(target)
 	return nil
+}
+func watchConfigThread(target any) {
+	watchChan := etclient.WatchKey(InitConf.Name + "/config")
+	for watchResp := range watchChan {
+		for _, event := range watchResp.Events {
+			if event.Type == clientv3.EventTypeDelete {
+				continue
+			}
+			configV := event.Kv.Value
+			err := toml.Unmarshal(configV, target)
+			if err != nil {
+				log.Println("failed to unmarshal new config: " + err.Error())
+				continue
+			}
+			log.Printf("updated new config: %#v", target)
+		}
+	}
 }
