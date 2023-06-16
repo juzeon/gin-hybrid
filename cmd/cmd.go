@@ -8,13 +8,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func Entry(registerFunc func(engine *gin.Engine)) {
+type EntryConfig struct {
+	Port int
+}
+
+func Entry(entryConfig EntryConfig, registerFunc func(engine *gin.Engine, api *gin.RouterGroup)) {
 	engine := gin.New()
 	engine.Use(gin.Logger(), nice.Recovery(router.RecoveryFunc))
 	service.Setup()
+	api := engine.Group("/api")
+	registerFunc(engine, api)
 	router.Setup(engine)
-	registerFunc(engine)
-	err := engine.Run(fmt.Sprintf(":%v", 7070))
+	err := engine.Run(fmt.Sprintf(":%v", entryConfig.Port))
 	if err != nil {
 		panic(err)
 	}

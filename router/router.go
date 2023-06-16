@@ -166,7 +166,6 @@ func Setup(e *gin.Engine) {
 			ctx.Request.Header.Set("Authorization", token)
 		}
 	})
-
 	e.HTMLRender = loadTemplates()
 	e.Static("/static", "web/static")
 	RegisterWebRouters(GetWebRouters(), e)
