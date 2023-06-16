@@ -14,12 +14,21 @@ const leaseTTL = 10
 var client *clientv3.Client
 var leaseID clientv3.LeaseID
 var ErrNotExist = errors.New("error key not exist")
-var namespace string
 
-func Setup(endpoints []string, namespaceV string) error {
-	namespace = namespaceV
+type Conf struct {
+	Endpoints []string
+	Namespace string
+	Name      string
+	IP        string
+	Port      int
+}
+
+var conf Conf
+
+func Setup(confV Conf) error {
+	conf = confV
 	c, err := clientv3.New(clientv3.Config{
-		Endpoints:   endpoints,
+		Endpoints:   conf.Endpoints,
 		DialTimeout: 5 * time.Second,
 	})
 	if err != nil {
@@ -33,13 +42,34 @@ func Setup(endpoints []string, namespaceV string) error {
 	go keepAliveThread()
 	return nil
 }
+func UpdateConf(confV Conf) error {
+	conf = confV
+	err := updateListDirectory()
+	return err
+}
 func registerServiceOnce() error {
 	resp, err := client.Lease.Grant(context.Background(), leaseTTL)
 	if err != nil {
 		return err
 	}
 	leaseID = resp.ID
-	log.Println("register service successfully with lease id: " + strconv.Itoa(int(leaseID)))
+	err = updateListDirectory()
+	if err != nil {
+		return err
+	}
+	log.Println("registered service successfully with lease id: " + strconv.Itoa(int(leaseID)))
+	return nil
+}
+func updateListDirectory() error {
+	if conf.Port == 0 {
+		return nil
+	}
+	value := conf.IP + ":" + strconv.Itoa(conf.Port)
+	err := PutRawKey("list/"+conf.Name+"/"+strconv.Itoa(int(leaseID)), value, clientv3.WithLease(leaseID))
+	if err != nil {
+		return err
+	}
+	log.Println("updated list directory: " + value)
 	return nil
 }
 func keepAliveThread() {
@@ -57,5 +87,5 @@ func keepAliveThread() {
 	}
 }
 func withKeyNamespace(key string) string {
-	return "/" + namespace + "/" + key
+	return "/" + conf.Namespace + "/" + key
 }

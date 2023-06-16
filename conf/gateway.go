@@ -1,7 +1,7 @@
 package conf
 
 type Gateway struct {
-	Port int `toml:"port"`
+	Common
 }
 
 var GatewayConf Gateway

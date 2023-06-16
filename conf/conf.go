@@ -5,12 +5,14 @@ import (
 	"github.com/BurntSushi/toml"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"log"
+	"reflect"
 )
 
 type Init struct {
 	Endpoints []string `toml:"endpoints"`
 	Namespace string   `toml:"namespace"`
 	Name      string   `toml:"name"`
+	IP        string   `toml:"ip"`
 }
 
 type Parent struct {
@@ -24,6 +26,9 @@ type ParentDB struct {
 	Pass   string `toml:"pass"`
 	DB     string `toml:"db"`
 }
+type Common struct {
+	Port int `toml:"port"`
+}
 
 var InitConf Init
 var ParentConf Parent
@@ -33,7 +38,14 @@ func LoadConfig(name string, target any) error {
 	if err != nil {
 		return err
 	}
-	err = etclient.Setup(InitConf.Endpoints, InitConf.Namespace)
+	etclientConf := etclient.Conf{
+		Endpoints: InitConf.Endpoints,
+		Namespace: InitConf.Namespace,
+		Name:      InitConf.Name,
+		IP:        InitConf.IP,
+		Port:      0,
+	}
+	err = etclient.Setup(etclientConf)
 	if err != nil {
 		return err
 	}
@@ -50,6 +62,12 @@ func LoadConfig(name string, target any) error {
 		return err
 	}
 	err = toml.Unmarshal([]byte(configV), target)
+	if err != nil {
+		return err
+	}
+	commonV := reflect.ValueOf(target).Elem().FieldByName("Common").Interface().(Common)
+	etclientConf.Port = commonV.Port
+	err = etclient.UpdateConf(etclientConf)
 	if err != nil {
 		return err
 	}
