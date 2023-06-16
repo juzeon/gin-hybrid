@@ -20,6 +20,8 @@ type Conf struct {
 	Namespace string
 	Name      string
 	IP        string
+	User      string
+	Pass      string
 	Port      int
 }
 
@@ -30,6 +32,8 @@ func Setup(confV Conf) error {
 	c, err := clientv3.New(clientv3.Config{
 		Endpoints:   conf.Endpoints,
 		DialTimeout: 5 * time.Second,
+		Username:    conf.User,
+		Password:    conf.Pass,
 	})
 	if err != nil {
 		return err

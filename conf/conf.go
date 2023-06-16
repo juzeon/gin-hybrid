@@ -9,10 +9,15 @@ import (
 )
 
 type Init struct {
+	Etcd Etcd   `toml:"etcd"`
+	Name string `toml:"name"`
+	IP   string `toml:"ip"`
+}
+type Etcd struct {
 	Endpoints []string `toml:"endpoints"`
 	Namespace string   `toml:"namespace"`
-	Name      string   `toml:"name"`
-	IP        string   `toml:"ip"`
+	User      string   `toml:"user"`
+	Pass      string   `toml:"pass"`
 }
 
 type Parent struct {
@@ -39,10 +44,12 @@ func LoadConfig(name string, target any) error {
 		return err
 	}
 	etclientConf := etclient.Conf{
-		Endpoints: InitConf.Endpoints,
-		Namespace: InitConf.Namespace,
+		Endpoints: InitConf.Etcd.Endpoints,
+		Namespace: InitConf.Etcd.Namespace,
 		Name:      InitConf.Name,
 		IP:        InitConf.IP,
+		User:      InitConf.Etcd.User,
+		Pass:      InitConf.Etcd.Pass,
 		Port:      0,
 	}
 	err = etclient.Setup(etclientConf)
