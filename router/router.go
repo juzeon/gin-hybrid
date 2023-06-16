@@ -167,9 +167,6 @@ func Setup(e *gin.Engine) {
 		}
 	})
 
-	api := e.Group("/api")
-	RegisterAPIRouters(GetUserAPIRouters(), api.Group("/user"))
-
 	e.HTMLRender = loadTemplates()
 	e.Static("/static", "web/static")
 	RegisterWebRouters(GetWebRouters(), e)
