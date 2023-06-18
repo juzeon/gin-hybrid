@@ -1,19 +1,29 @@
 package rest
 
 import (
+	"errors"
+	"fmt"
 	"gin-hybrid/etclient"
+	"gin-hybrid/pkg/app"
+	"github.com/go-resty/resty/v2"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"log"
+	"math/rand"
+	"reflect"
+	"strings"
 	"sync"
+	"time"
 )
 
 type Client struct {
 	etclientInst *etclient.Client
+	httpClient   *resty.Client
 	services     []*Service
 }
 
 func NewClient(etclientInst *etclient.Client) *Client {
-	return &Client{etclientInst: etclientInst}
+	httpClient := resty.New().SetTimeout(10 * time.Second)
+	return &Client{etclientInst: etclientInst, httpClient: httpClient}
 }
 func (c *Client) GetService(name string) *Service {
 	for _, service := range c.services {
@@ -29,6 +39,7 @@ func (c *Client) AddService(name string) (*Service, error) {
 		Endpoints:    map[clientv3.LeaseID]string{},
 		mu:           sync.Mutex{},
 		etclientInst: c.etclientInst,
+		httpClient:   c.httpClient,
 	}
 	err := service.UpdateServiceDirectory()
 	if err != nil {
@@ -50,8 +61,81 @@ type Service struct {
 	Endpoints    map[clientv3.LeaseID]string
 	mu           sync.Mutex
 	etclientInst *etclient.Client
+	httpClient   *resty.Client
 }
 
+func (s *Service) Call(method string, path string, data any) (any, error) {
+	method = strings.ToUpper(method)
+	endpoint, err := s.GetEndpointRandomly()
+	if err != nil {
+		return "", err
+	}
+	req := s.httpClient.R().SetResult(&app.Result{})
+	req.Method = method
+	req.URL = "http://" + endpoint + "/api/" + path
+	dataValue := reflect.ValueOf(data).Elem()
+	values := map[string]string{}
+	switch dataValue.Kind() {
+	case reflect.Map:
+		valuesTmp := dataValue.Interface().(map[string]any)
+		for k, v := range valuesTmp {
+			values[k] = fmt.Sprintf("%v", v)
+		}
+	case reflect.Struct:
+		values = s.convertStructToMap(data)
+	}
+	if method == "GET" || method == "HEAD" {
+		req.SetQueryParams(values)
+	} else {
+		req.SetFormData(values)
+	}
+	resp, err := req.Send()
+	if err != nil {
+		return "", errors.New("failed to call remote api: " + err.Error())
+	}
+	result := resp.Result().(*app.Result)
+	if result.Code > 399 {
+		return "", errors.New("failed to call remote api: " + result.Msg)
+	}
+	return result.Data, nil
+}
+func (s *Service) convertStructToMap(data any) map[string]string {
+	// Create an empty map to store the result
+	result := make(map[string]string)
+	// Get the value and type of the struct
+	v := reflect.ValueOf(data).Elem()
+	t := v.Type()
+	// Loop over the fields of the struct
+	for i := 0; i < t.NumField(); i++ {
+		// Get the field value and type
+		fv := v.Field(i)
+		ft := t.Field(i)
+		// Get the form tag of the field
+		tag := ft.Tag.Get("form")
+		// If the tag is empty, use the field name as the key
+		if tag == "" {
+			tag = ft.Name
+		}
+		// Convert the field value to an interface{}
+		fvi := fmt.Sprintf("%v", fv.Interface())
+		// Store the key-value pair in the result map
+		result[tag] = fvi
+	}
+	return result
+}
+func (s *Service) GetEndpointRandomly() (string, error) {
+	if len(s.Endpoints) == 0 {
+		return "", errors.New("no available service")
+	}
+	i := rand.Intn(len(s.Endpoints))
+	for _, v := range s.Endpoints {
+		if i == 0 {
+			return v, nil
+		}
+		i--
+	}
+	return "", nil
+}
 func (s *Service) updateServiceDirectoryThread() {
 	for {
 		watchChan := s.etclientInst.WatchKeysByPrefix("list/" + s.Name)

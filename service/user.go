@@ -31,6 +31,6 @@ func (u UserService) Me(aw *app.Wrapper) app.Result {
 	uc := aw.ExtractUserClaims()
 	return aw.Success(uc)
 }
-func (u UserService) GetData(aw *app.Wrapper) app.Result {
+func (u UserService) ExampleCall(aw *app.Wrapper) app.Result {
 	return aw.Success("This is an example API call.")
 }

@@ -20,8 +20,8 @@ func GetUserAPIRouters() []APIRouter {
 		},
 		{
 			Method:   "get",
-			Path:     "/get_data",
-			Handlers: AssembleHandlers(srv.GetData),
+			Path:     "/example_call",
+			Handlers: AssembleHandlers(srv.ExampleCall),
 		},
 	}
 	return routers

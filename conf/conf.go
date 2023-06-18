@@ -44,7 +44,7 @@ type ServiceConfig[T any] struct {
 
 func NewServiceConfig[T any](name string) (*ServiceConfig[T], error) {
 	srvConf := &ServiceConfig[T]{Name: name}
-	etclientIns, err := loadConfig(srvConf)
+	etclientIns, err := LoadConfig(srvConf)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +52,7 @@ func NewServiceConfig[T any](name string) (*ServiceConfig[T], error) {
 	return srvConf, nil
 }
 
-func loadConfig[T any](config *ServiceConfig[T]) (*etclient.Client, error) {
+func LoadConfig[T any](config *ServiceConfig[T]) (*etclient.Client, error) {
 	// load local config
 	_, err := toml.DecodeFile("cmd/"+config.Name+"/config.toml", &config.InitConf)
 	if err != nil {

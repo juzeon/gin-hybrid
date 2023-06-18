@@ -5,7 +5,6 @@ import (
 	"gin-hybrid/cmd"
 	"gin-hybrid/conf"
 	"gin-hybrid/rest"
-	"gin-hybrid/router"
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,6 +21,6 @@ func main() {
 	}
 	fmt.Printf("%#v\n", srvConf)
 	cmd.Entry(cmd.EntryConfig{Port: srvConf.SelfConf.Port}, func(engine *gin.Engine, api *gin.RouterGroup) {
-		router.RegisterAPIRouters(router.GetUserAPIRouters(), api.Group("/user"))
+
 	})
 }
