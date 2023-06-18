@@ -6,6 +6,7 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"log"
 	"strconv"
+	"sync"
 	"time"
 )
 
@@ -25,10 +26,30 @@ type Conf struct {
 	Port      int
 }
 
+type serviceRegisterEventObserver struct {
+	Listeners []func()
+	Mu        sync.Mutex
+}
+
+func (s *serviceRegisterEventObserver) NotifyAll() {
+	s.Mu.Lock()
+	defer s.Mu.Unlock()
+	for _, listener := range s.Listeners {
+		listener()
+	}
+}
+func (s *serviceRegisterEventObserver) AddListener(f func()) {
+	s.Mu.Lock()
+	defer s.Mu.Unlock()
+	s.Listeners = append(s.Listeners, f)
+}
+
 var conf Conf
+var serviceRegisterEventObservers serviceRegisterEventObserver
 
 func Setup(confV Conf) error {
 	conf = confV
+	// create an etcd client; port is not available yet for now
 	c, err := clientv3.New(clientv3.Config{
 		Endpoints:   conf.Endpoints,
 		DialTimeout: 5 * time.Second,
@@ -39,7 +60,11 @@ func Setup(confV Conf) error {
 		return err
 	}
 	client = c
-	err = registerServiceOnce()
+	return nil
+}
+func RegisterService(confV Conf) error {
+	conf = confV
+	err := registerServiceOnce()
 	if err != nil {
 		return err
 	}
@@ -50,6 +75,9 @@ func UpdateConf(confV Conf) error {
 	conf = confV
 	err := updateListDirectory()
 	return err
+}
+func AddServiceRegisterEventListener(f func()) {
+	serviceRegisterEventObservers.AddListener(f)
 }
 func registerServiceOnce() error {
 	resp, err := client.Lease.Grant(context.Background(), leaseTTL)
@@ -62,12 +90,12 @@ func registerServiceOnce() error {
 		return err
 	}
 	log.Println("registered service successfully with lease id: " + strconv.Itoa(int(leaseID)))
+	go serviceRegisterEventObservers.NotifyAll()
 	return nil
 }
+
+// updateListDirectory register current service into the etcd directory
 func updateListDirectory() error {
-	if conf.Port == 0 {
-		return nil
-	}
 	value := conf.IP + ":" + strconv.Itoa(conf.Port)
 	err := PutRawKey("list/"+conf.Name+"/"+strconv.Itoa(int(leaseID)), value, clientv3.WithLease(leaseID))
 	if err != nil {
@@ -89,7 +117,4 @@ func keepAliveThread() {
 		}
 		time.Sleep(leaseTTL / 2 * time.Second)
 	}
-}
-func withKeyNamespace(key string) string {
-	return "/" + conf.Namespace + "/" + key
 }

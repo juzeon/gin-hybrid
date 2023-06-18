@@ -39,10 +39,12 @@ var InitConf Init
 var ParentConf Parent
 
 func LoadConfig(name string, target any) error {
+	// load local config
 	_, err := toml.DecodeFile("cmd/"+name+"/config.toml", &InitConf)
 	if err != nil {
 		return err
 	}
+	// initialize etclient using local config
 	etclientConf := etclient.Conf{
 		Endpoints: InitConf.Etcd.Endpoints,
 		Namespace: InitConf.Etcd.Namespace,
@@ -50,7 +52,7 @@ func LoadConfig(name string, target any) error {
 		IP:        InitConf.IP,
 		User:      InitConf.Etcd.User,
 		Pass:      InitConf.Etcd.Pass,
-		Port:      0,
+		Port:      0, // not available for now
 	}
 	err = etclient.Setup(etclientConf)
 	if err != nil {
@@ -64,6 +66,7 @@ func LoadConfig(name string, target any) error {
 	if err != nil {
 		return err
 	}
+	// initialize config for current service
 	configV, err := etclient.GetRawKey(name + "/config")
 	if err != nil && err != etclient.ErrNotExist {
 		return err
@@ -74,27 +77,31 @@ func LoadConfig(name string, target any) error {
 	}
 	commonV := reflect.ValueOf(target).Elem().FieldByName("Common").Interface().(Common)
 	etclientConf.Port = commonV.Port
-	err = etclient.UpdateConf(etclientConf)
+	err = etclient.RegisterService(etclientConf)
 	if err != nil {
 		return err
 	}
 	go watchConfigThread(target)
 	return nil
 }
+
+// watchConfigThread watches config changes and update
 func watchConfigThread(target any) {
-	watchChan := etclient.WatchKey(InitConf.Name + "/config")
-	for watchResp := range watchChan {
-		for _, event := range watchResp.Events {
-			if event.Type == clientv3.EventTypeDelete {
-				continue
+	for {
+		watchChan := etclient.WatchKey(InitConf.Name + "/config")
+		for watchResp := range watchChan {
+			for _, event := range watchResp.Events {
+				if event.Type == clientv3.EventTypeDelete {
+					continue
+				}
+				configV := event.Kv.Value
+				err := toml.Unmarshal(configV, target)
+				if err != nil {
+					log.Println("failed to unmarshal new config: " + err.Error())
+					continue
+				}
+				log.Printf("updated new config: %#v\n", target)
 			}
-			configV := event.Kv.Value
-			err := toml.Unmarshal(configV, target)
-			if err != nil {
-				log.Println("failed to unmarshal new config: " + err.Error())
-				continue
-			}
-			log.Printf("updated new config: %#v", target)
 		}
 	}
 }
