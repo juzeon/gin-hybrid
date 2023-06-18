@@ -1,24 +1,27 @@
 package main
 
 import (
+	"fmt"
 	"gin-hybrid/cmd"
 	"gin-hybrid/conf"
 	"gin-hybrid/rest"
 	"gin-hybrid/router"
 	"github.com/gin-gonic/gin"
-	"log"
 )
 
 func main() {
-	conf.GatewayConf.Load()
-	log.Printf("%#v", conf.InitConf)
-	log.Printf("%#v", conf.ParentConf)
-	log.Printf("%#v", conf.GatewayConf)
-	_, err := rest.NewService("user")
+	srvConf, err := conf.NewServiceConfig[conf.Gateway]("gateway")
 	if err != nil {
 		panic(err)
 	}
-	cmd.Entry(cmd.EntryConfig{Port: conf.GatewayConf.Port}, func(engine *gin.Engine, api *gin.RouterGroup) {
+	conf.GatewayServiceConfig = srvConf
+	restClient := rest.NewClient(srvConf.Etclient)
+	_, err = restClient.AddService("user")
+	if err != nil {
+		panic(err)
+	}
+	fmt.Printf("%#v\n", srvConf)
+	cmd.Entry(cmd.EntryConfig{Port: srvConf.SelfConf.Port}, func(engine *gin.Engine, api *gin.RouterGroup) {
 		router.RegisterAPIRouters(router.GetUserAPIRouters(), api.Group("/user"))
 	})
 }

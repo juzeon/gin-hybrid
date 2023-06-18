@@ -34,73 +34,87 @@ type ParentDB struct {
 type Common struct {
 	Port int `toml:"port"`
 }
+type ServiceConfig[T any] struct {
+	Name       string
+	InitConf   Init
+	ParentConf Parent
+	SelfConf   T
+	Etclient   *etclient.Client
+}
 
-var InitConf Init
-var ParentConf Parent
-
-func LoadConfig(name string, target any) error {
-	// load local config
-	_, err := toml.DecodeFile("cmd/"+name+"/config.toml", &InitConf)
+func NewServiceConfig[T any](name string) (*ServiceConfig[T], error) {
+	srvConf := &ServiceConfig[T]{Name: name}
+	etclientIns, err := loadConfig(srvConf)
 	if err != nil {
-		return err
+		return nil, err
+	}
+	srvConf.Etclient = etclientIns
+	return srvConf, nil
+}
+
+func loadConfig[T any](config *ServiceConfig[T]) (*etclient.Client, error) {
+	// load local config
+	_, err := toml.DecodeFile("cmd/"+config.Name+"/config.toml", &config.InitConf)
+	if err != nil {
+		return nil, err
 	}
 	// initialize etclient using local config
 	etclientConf := etclient.Conf{
-		Endpoints: InitConf.Etcd.Endpoints,
-		Namespace: InitConf.Etcd.Namespace,
-		Name:      InitConf.Name,
-		IP:        InitConf.IP,
-		User:      InitConf.Etcd.User,
-		Pass:      InitConf.Etcd.Pass,
+		Endpoints: config.InitConf.Etcd.Endpoints,
+		Namespace: config.InitConf.Etcd.Namespace,
+		Name:      config.InitConf.Name,
+		IP:        config.InitConf.IP,
+		User:      config.InitConf.Etcd.User,
+		Pass:      config.InitConf.Etcd.Pass,
 		Port:      0, // not available for now
 	}
-	err = etclient.Setup(etclientConf)
+	etclientIns, err := etclient.NewClient(etclientConf)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	parentV, err := etclient.GetRawKey("parent_config")
+	parentV, err := etclientIns.GetRawKey("parent_config")
 	if err != nil && err != etclient.ErrNotExist {
-		return err
+		return nil, err
 	}
-	err = toml.Unmarshal([]byte(parentV), &ParentConf)
+	err = toml.Unmarshal([]byte(parentV), &config.ParentConf)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	// initialize config for current service
-	configV, err := etclient.GetRawKey(name + "/config")
+	configV, err := etclientIns.GetRawKey(config.Name + "/config")
 	if err != nil && err != etclient.ErrNotExist {
-		return err
+		return nil, err
 	}
-	err = toml.Unmarshal([]byte(configV), target)
+	err = toml.Unmarshal([]byte(configV), &config.SelfConf)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	commonV := reflect.ValueOf(target).Elem().FieldByName("Common").Interface().(Common)
+	commonV := reflect.ValueOf(&config.SelfConf).Elem().FieldByName("Common").Interface().(Common)
 	etclientConf.Port = commonV.Port
-	err = etclient.RegisterService(etclientConf)
+	err = etclientIns.RegisterService(etclientConf)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	go watchConfigThread(target)
-	return nil
+	go watchConfigThread(config)
+	return etclientIns, nil
 }
 
 // watchConfigThread watches config changes and update
-func watchConfigThread(target any) {
+func watchConfigThread[T any](config *ServiceConfig[T]) {
 	for {
-		watchChan := etclient.WatchKey(InitConf.Name + "/config")
+		watchChan := config.Etclient.WatchKey(config.InitConf.Name + "/config")
 		for watchResp := range watchChan {
 			for _, event := range watchResp.Events {
 				if event.Type == clientv3.EventTypeDelete {
 					continue
 				}
 				configV := event.Kv.Value
-				err := toml.Unmarshal(configV, target)
+				err := toml.Unmarshal(configV, &config.SelfConf)
 				if err != nil {
 					log.Println("failed to unmarshal new config: " + err.Error())
 					continue
 				}
-				log.Printf("updated new config: %#v\n", target)
+				log.Printf("updated new config: %#v\n", &config.SelfConf)
 			}
 		}
 	}

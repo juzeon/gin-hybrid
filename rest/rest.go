@@ -7,19 +7,54 @@ import (
 	"sync"
 )
 
-func Setup() {
+type Client struct {
+	etclientInst *etclient.Client
+	services     []*Service
+}
 
+func NewClient(etclientInst *etclient.Client) *Client {
+	return &Client{etclientInst: etclientInst}
+}
+func (c *Client) GetService(name string) *Service {
+	for _, service := range c.services {
+		if service.Name == name {
+			return service
+		}
+	}
+	return nil
+}
+func (c *Client) AddService(name string) (*Service, error) {
+	service := &Service{
+		Name:         name,
+		Endpoints:    map[clientv3.LeaseID]string{},
+		mu:           sync.Mutex{},
+		etclientInst: c.etclientInst,
+	}
+	err := service.UpdateServiceDirectory()
+	if err != nil {
+		return nil, err
+	}
+	go service.updateServiceDirectoryThread()
+	c.etclientInst.AddServiceRegisterEventListener(func() {
+		err := service.UpdateServiceDirectory()
+		if err != nil {
+			log.Println("observer failed to update service directory of " + service.Name + ": " + err.Error())
+		}
+	})
+	c.services = append(c.services, service)
+	return service, nil
 }
 
 type Service struct {
-	Name      string
-	Endpoints map[clientv3.LeaseID]string
-	mu        sync.Mutex
+	Name         string
+	Endpoints    map[clientv3.LeaseID]string
+	mu           sync.Mutex
+	etclientInst *etclient.Client
 }
 
 func (s *Service) updateServiceDirectoryThread() {
 	for {
-		watchChan := etclient.WatchKeysByPrefix("list/" + s.Name)
+		watchChan := s.etclientInst.WatchKeysByPrefix("list/" + s.Name)
 		for watchResp := range watchChan {
 			s.mu.Lock()
 			for _, event := range watchResp.Events {
@@ -38,7 +73,7 @@ func (s *Service) updateServiceDirectoryThread() {
 	}
 }
 func (s *Service) UpdateServiceDirectory() error {
-	kvArr, err := etclient.GetRawKeysByPrefix("list/" + s.Name)
+	kvArr, err := s.etclientInst.GetRawKeysByPrefix("list/" + s.Name)
 	if err != nil {
 		return err
 	}
@@ -54,23 +89,4 @@ func (s *Service) UpdateServiceDirectory() error {
 	}
 	log.Printf("updated the directory of service "+s.Name+": %#v\n", s.Endpoints)
 	return nil
-}
-func NewService(name string) (*Service, error) {
-	service := &Service{
-		Name:      name,
-		Endpoints: map[clientv3.LeaseID]string{},
-		mu:        sync.Mutex{},
-	}
-	err := service.UpdateServiceDirectory()
-	if err != nil {
-		return nil, err
-	}
-	go service.updateServiceDirectoryThread()
-	etclient.AddServiceRegisterEventListener(func() {
-		err := service.UpdateServiceDirectory()
-		if err != nil {
-			log.Println("observer failed to update service directory of " + service.Name + ": " + err.Error())
-		}
-	})
-	return service, nil
 }
