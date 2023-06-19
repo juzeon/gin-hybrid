@@ -2,3 +2,4 @@
 cmd/gateway/config.toml
 cmd/article/config.toml
 cmd/user/config.toml
+main
