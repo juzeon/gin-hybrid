@@ -62,11 +62,13 @@ func GetWebRoutersFuncs() map[string]any {
 func AssemblePaths(paths ...string) []APIRouter {
 	var routers []APIRouter
 	for _, path := range paths {
-		if !strings.HasPrefix(path, "/") {
-			panic("path must start with /: " + path)
+		arr := strings.Split(path, ":")
+		realPath := strings.Join(arr[1:], ":")
+		if !strings.HasPrefix(realPath, "/") {
+			panic("path must start with /: " + realPath)
 		}
-		if !strings.HasPrefix(path, "/api") {
-			path = "/api" + path
+		if !strings.HasPrefix(realPath, "/api") {
+			realPath = "/api" + realPath
 		}
 		router, ok := PathAPIRouterMap[path]
 		if !ok {

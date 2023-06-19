@@ -22,8 +22,6 @@ type APIRouter struct {
 
 var PathAPIRouterMap = map[string]APIRouter{}
 
-// TODO fix http method overwrite
-
 type WebRouter struct {
 	Name           string               // name of router
 	OverwritePath  string               // use this to rewrite relativePath if it's not null
@@ -88,7 +86,7 @@ func RegisterAPIRouters[T any](apiRouters []APIRouter, api *gin.RouterGroup, con
 		default:
 			panic("method " + apiRouter.Method + " not found")
 		}
-		PathAPIRouterMap[g.BasePath()+apiRouter.Path] = apiRouter
+		PathAPIRouterMap[apiRouter.Method+":"+g.BasePath()+apiRouter.Path] = apiRouter
 	}
 }
 func RegisterWebRouters(webRouters []WebRouter, e *gin.Engine) {
