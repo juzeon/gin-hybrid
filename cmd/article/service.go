@@ -21,11 +21,11 @@ func (a ArticleService) PostArticle(aw *app.Wrapper) app.Result {
 	if err := aw.Ctx.ShouldBind(&req); err != nil {
 		return aw.Error(err.Error())
 	}
-	exampleGet := a.userService.MustCall("get", "/example_get", map[string]any{"example": uc.UserID})
+	exampleGet := a.userService.MustCall("get", "/example", map[string]any{"example": uc.UserID})
 	type ExamplePostData struct {
 		Example time.Time `form:"example"`
 	}
-	examplePost := a.userService.MustCall("post", "/example_post", ExamplePostData{Example: uc.LoginTime})
+	examplePost := a.userService.MustCall("post", "/example", ExamplePostData{Example: uc.LoginTime})
 	return aw.Success(fmt.Sprintf("post an article with title %v and content %v, example_get: %v, example_post: %v",
 		req.Title, req.Content, exampleGet.(string), examplePost.(string)))
 }

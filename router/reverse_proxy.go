@@ -22,7 +22,7 @@ func (p *ProxyRouter) Handler(c *gin.Context) {
 		aw.ErrorWithCode(503, err.Error()).SendJSON()
 		return
 	}
-	u, err := url.Parse(endpoint)
+	u, err := url.Parse("http://" + endpoint)
 	if err != nil {
 		panic(err)
 	}

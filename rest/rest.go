@@ -11,6 +11,7 @@ import (
 	"log"
 	"math/rand"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -92,10 +93,13 @@ func (s *Service) Call(method string, path string, data any) (any, error) {
 	}
 	req := s.httpClient.R().SetResult(&app.Result{})
 	req.Method = method
-	req.URL = "http://" + endpoint + "/api" + path
+	req.URL = "http://" + endpoint + "/api/" + s.Name + path
 	req.SetHeader("X-RPC-Key", s.rpcKey)
 	if data != nil {
-		dataValue := reflect.ValueOf(data).Elem()
+		dataValue := reflect.ValueOf(data)
+		if dataValue.Kind() == reflect.Pointer {
+			dataValue = dataValue.Elem()
+		}
 		values := map[string]string{}
 		switch dataValue.Kind() {
 		case reflect.Map:
@@ -104,7 +108,7 @@ func (s *Service) Call(method string, path string, data any) (any, error) {
 				values[k] = fmt.Sprintf("%v", v)
 			}
 		case reflect.Struct:
-			values = s.convertStructToMap(data)
+			values = s.convertStructToMap(dataValue.Interface())
 		}
 		if method == "GET" || method == "HEAD" {
 			req.SetQueryParams(values)
@@ -117,8 +121,9 @@ func (s *Service) Call(method string, path string, data any) (any, error) {
 		return "", errors.New("failed to call remote api: " + err.Error())
 	}
 	result := resp.Result().(*app.Result)
-	if result.Code > 399 {
-		return "", errors.New("failed to call remote api: " + result.Msg)
+	if resp.StatusCode() > 399 {
+		return "", errors.New("failed to call remote api with status code " + strconv.Itoa(resp.StatusCode()) +
+			": " + result.Msg)
 	}
 	return result.Data, nil
 }
@@ -126,7 +131,7 @@ func (s *Service) convertStructToMap(data any) map[string]string {
 	// Create an empty map to store the result
 	result := make(map[string]string)
 	// Get the value and type of the struct
-	v := reflect.ValueOf(data).Elem()
+	v := reflect.ValueOf(data)
 	t := v.Type()
 	// Loop over the fields of the struct
 	for i := 0; i < t.NumField(); i++ {

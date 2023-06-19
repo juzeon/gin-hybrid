@@ -35,10 +35,11 @@ type WebRouter struct {
 	GetDescription func(map[string]any) string
 }
 
-func RegisterAPIRouters[T any](apiRouters []APIRouter, g *gin.RouterGroup, conf *conf.ServiceConfig[T]) {
-	if !strings.HasPrefix(g.BasePath(), "/") {
-		panic("BasePath must start with /: " + g.BasePath())
+func RegisterAPIRouters[T any](apiRouters []APIRouter, api *gin.RouterGroup, conf *conf.ServiceConfig[T]) {
+	if !strings.HasPrefix(api.BasePath(), "/") {
+		panic("BasePath must start with /: " + api.BasePath())
 	}
+	g := api.Group("/" + conf.InitConf.Name)
 	for _, apiRouter := range apiRouters {
 		apiRouter := apiRouter
 		if !strings.HasPrefix(apiRouter.Path, "/") {

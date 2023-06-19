@@ -3,6 +3,7 @@ package main
 import (
 	"gin-hybrid/cmd"
 	"gin-hybrid/conf"
+	"gin-hybrid/middleware"
 	"gin-hybrid/rest"
 	"gin-hybrid/router"
 	"github.com/gin-gonic/gin"
@@ -23,7 +24,7 @@ func getAPIRouters(userService *rest.Service) []router.APIRouter {
 		{
 			Method:   "post",
 			Path:     "/articles",
-			Handlers: router.AssembleHandlers(srv.PostArticle),
+			Handlers: router.AssembleHandlers(middleware.Auth, srv.PostArticle),
 		},
 		{
 			Method:   "get",
