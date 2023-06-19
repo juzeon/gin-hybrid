@@ -10,22 +10,24 @@ import (
 )
 
 func GetWebRouters() []WebRouter {
-	routers := []WebRouter{
-		{
-			Name:  "index",
-			Title: "Index",
-		},
-		{
-			Name:  "user/login",
-			Title: "Login",
-		},
-		{
-			Name:    "user/me",
-			Title:   "User Information",
-			UseAPIs: AssemblePaths("/user/me"),
-		},
-	}
-	return routers
+	//Note: uncomment these lines to register web routers
+	//routers := []WebRouter{
+	//	{
+	//		Name:  "index",
+	//		Title: "Index",
+	//	},
+	//	{
+	//		Name:  "user/login",
+	//		Title: "Login",
+	//	},
+	//	{
+	//		Name:    "user/me",
+	//		Title:   "User Information",
+	//		UseAPIs: AssemblePaths("/user/me"),
+	//	},
+	//}
+	//return routers
+	return []WebRouter{}
 }
 func GetWebRoutersCommonAPIs() map[string]APIRouter {
 	return map[string]APIRouter{

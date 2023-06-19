@@ -2,6 +2,7 @@ package router
 
 import (
 	"fmt"
+	"gin-hybrid/conf"
 	"gin-hybrid/data/dto"
 	"gin-hybrid/pkg/app"
 	"github.com/gin-contrib/multitemplate"
@@ -16,9 +17,12 @@ type APIRouter struct {
 	Method   string
 	Path     string
 	Handlers []func(aw *app.Wrapper) app.Result
+	RPCOnly  bool
 }
 
 var PathAPIRouterMap = map[string]APIRouter{}
+
+// TODO fix http method overwrite
 
 type WebRouter struct {
 	Name           string               // name of router
@@ -31,7 +35,7 @@ type WebRouter struct {
 	GetDescription func(map[string]any) string
 }
 
-func RegisterAPIRouters(apiRouters []APIRouter, g *gin.RouterGroup) {
+func RegisterAPIRouters[T any](apiRouters []APIRouter, g *gin.RouterGroup, conf *conf.ServiceConfig[T]) {
 	if !strings.HasPrefix(g.BasePath(), "/") {
 		panic("BasePath must start with /: " + g.BasePath())
 	}
@@ -44,6 +48,13 @@ func RegisterAPIRouters(apiRouters []APIRouter, g *gin.RouterGroup) {
 		commonHandler := func(ctx *gin.Context) {
 			aw := app.NewWrapper(ctx)
 			var result app.Result
+			if apiRouter.RPCOnly {
+				rpcKey := ctx.GetHeader("X-RPC-Key")
+				if rpcKey != conf.ParentConf.RPCKey {
+					ctx.JSON(401, "direct API Call sent to RPC-only routes")
+					return
+				}
+			}
 			t := time.Now()
 			for _, handler := range apiRouter.Handlers {
 				result = handler(aw)
@@ -63,6 +74,16 @@ func RegisterAPIRouters(apiRouters []APIRouter, g *gin.RouterGroup) {
 			g.GET(apiRouter.Path, commonHandler)
 		case "post":
 			g.POST(apiRouter.Path, commonHandler)
+		case "put":
+			g.PUT(apiRouter.Path, commonHandler)
+		case "delete":
+			g.DELETE(apiRouter.Path, commonHandler)
+		case "patch":
+			g.PATCH(apiRouter.Path, commonHandler)
+		case "head":
+			g.HEAD(apiRouter.Path, commonHandler)
+		case "options":
+			g.OPTIONS(apiRouter.Path, commonHandler)
 		default:
 			panic("method " + apiRouter.Method + " not found")
 		}
@@ -216,7 +237,7 @@ func RecoveryFunc(c *gin.Context, err any) {
 	msg := "Internal error: " + fmt.Sprintf("%v", err)
 	if strings.HasPrefix(aw.Ctx.Request.RequestURI, "/api") {
 		aw.Ctx.Header("Content-Type", "application/json; charset=utf-8")
-		aw.Error(msg).SendJSON()
+		aw.ErrorWithCode(500, msg).SendJSON()
 	} else {
 		c.HTML(500, "error.gohtml", aw.Error(msg))
 	}

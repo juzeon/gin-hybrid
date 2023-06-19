@@ -3,6 +3,7 @@ package rest
 import (
 	"errors"
 	"fmt"
+	"gin-hybrid/conf"
 	"gin-hybrid/etclient"
 	"gin-hybrid/pkg/app"
 	"github.com/go-resty/resty/v2"
@@ -15,17 +16,17 @@ import (
 	"time"
 )
 
-type Client struct {
-	etclientInst *etclient.Client
-	httpClient   *resty.Client
-	services     []*Service
+type Client[T any] struct {
+	srvConf    *conf.ServiceConfig[T]
+	httpClient *resty.Client
+	services   []*Service
 }
 
-func NewClient(etclientInst *etclient.Client) *Client {
+func NewClient[T any](srvConf *conf.ServiceConfig[T]) *Client[T] {
 	httpClient := resty.New().SetTimeout(10 * time.Second)
-	return &Client{etclientInst: etclientInst, httpClient: httpClient}
+	return &Client[T]{srvConf: srvConf, httpClient: httpClient}
 }
-func (c *Client) GetService(name string) *Service {
+func (c *Client[T]) GetService(name string) *Service {
 	for _, service := range c.services {
 		if service.Name == name {
 			return service
@@ -33,20 +34,28 @@ func (c *Client) GetService(name string) *Service {
 	}
 	return nil
 }
-func (c *Client) AddService(name string) (*Service, error) {
+func (c *Client[T]) MustAddServiceDependency(name string) *Service {
+	service, err := c.AddServiceDependency(name)
+	if err != nil {
+		panic(err)
+	}
+	return service
+}
+func (c *Client[T]) AddServiceDependency(name string) (*Service, error) {
 	service := &Service{
 		Name:         name,
 		Endpoints:    map[clientv3.LeaseID]string{},
 		mu:           sync.Mutex{},
-		etclientInst: c.etclientInst,
+		etclientInst: c.srvConf.Etclient,
 		httpClient:   c.httpClient,
+		rpcKey:       c.srvConf.ParentConf.RPCKey,
 	}
 	err := service.UpdateServiceDirectory()
 	if err != nil {
 		return nil, err
 	}
 	go service.updateServiceDirectoryThread()
-	c.etclientInst.AddServiceRegisterEventListener(func() {
+	c.srvConf.Etclient.AddServiceRegisterEventListener(func() {
 		err := service.UpdateServiceDirectory()
 		if err != nil {
 			log.Println("observer failed to update service directory of " + service.Name + ": " + err.Error())
@@ -62,32 +71,46 @@ type Service struct {
 	mu           sync.Mutex
 	etclientInst *etclient.Client
 	httpClient   *resty.Client
+	rpcKey       string
 }
 
+func (s *Service) MustCall(method string, path string, data any) any {
+	res, err := s.Call(method, path, data)
+	if err != nil {
+		panic(err)
+	}
+	return res
+}
 func (s *Service) Call(method string, path string, data any) (any, error) {
 	method = strings.ToUpper(method)
+	if !strings.HasPrefix(path, "/") {
+		return "", errors.New("path must start with `/`")
+	}
 	endpoint, err := s.GetEndpointRandomly()
 	if err != nil {
 		return "", err
 	}
 	req := s.httpClient.R().SetResult(&app.Result{})
 	req.Method = method
-	req.URL = "http://" + endpoint + "/api/" + path
-	dataValue := reflect.ValueOf(data).Elem()
-	values := map[string]string{}
-	switch dataValue.Kind() {
-	case reflect.Map:
-		valuesTmp := dataValue.Interface().(map[string]any)
-		for k, v := range valuesTmp {
-			values[k] = fmt.Sprintf("%v", v)
+	req.URL = "http://" + endpoint + "/api" + path
+	req.SetHeader("X-RPC-Key", s.rpcKey)
+	if data != nil {
+		dataValue := reflect.ValueOf(data).Elem()
+		values := map[string]string{}
+		switch dataValue.Kind() {
+		case reflect.Map:
+			valuesTmp := dataValue.Interface().(map[string]any)
+			for k, v := range valuesTmp {
+				values[k] = fmt.Sprintf("%v", v)
+			}
+		case reflect.Struct:
+			values = s.convertStructToMap(data)
 		}
-	case reflect.Struct:
-		values = s.convertStructToMap(data)
-	}
-	if method == "GET" || method == "HEAD" {
-		req.SetQueryParams(values)
-	} else {
-		req.SetFormData(values)
+		if method == "GET" || method == "HEAD" {
+			req.SetQueryParams(values)
+		} else {
+			req.SetFormData(values)
+		}
 	}
 	resp, err := req.Send()
 	if err != nil {

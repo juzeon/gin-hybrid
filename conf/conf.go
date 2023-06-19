@@ -1,6 +1,7 @@
 package conf
 
 import (
+	"flag"
 	"gin-hybrid/etclient"
 	"github.com/BurntSushi/toml"
 	clientv3 "go.etcd.io/etcd/client/v3"
@@ -21,7 +22,8 @@ type Etcd struct {
 }
 
 type Parent struct {
-	DB ParentDB `toml:"db"`
+	RPCKey string   `toml:"rpc-key"`
+	DB     ParentDB `toml:"db"`
 }
 type ParentDB struct {
 	Driver string `toml:"driver"`
@@ -35,15 +37,25 @@ type Common struct {
 	Port int `toml:"port"`
 }
 type ServiceConfig[T any] struct {
-	Name       string
-	InitConf   Init
-	ParentConf Parent
-	SelfConf   T
-	Etclient   *etclient.Client
+	InitConf     Init
+	ParentConf   Parent
+	SelfConf     T
+	Etclient     *etclient.Client
+	InitConfPath string
 }
 
-func NewServiceConfig[T any](name string) (*ServiceConfig[T], error) {
-	srvConf := &ServiceConfig[T]{Name: name}
+func MustNewServiceConfig[T any]() *ServiceConfig[T] {
+	srvConf, err := NewServiceConfig[T]()
+	if err != nil {
+		panic(err)
+	}
+	return srvConf
+}
+func NewServiceConfig[T any]() (*ServiceConfig[T], error) {
+	srvConf := &ServiceConfig[T]{}
+	flag.StringVar(&srvConf.InitConfPath, "c", "config.toml",
+		"specify the path of config.toml")
+	flag.Parse()
 	etclientIns, err := LoadConfig(srvConf)
 	if err != nil {
 		return nil, err
@@ -54,7 +66,7 @@ func NewServiceConfig[T any](name string) (*ServiceConfig[T], error) {
 
 func LoadConfig[T any](config *ServiceConfig[T]) (*etclient.Client, error) {
 	// load local config
-	_, err := toml.DecodeFile("cmd/"+config.Name+"/config.toml", &config.InitConf)
+	_, err := toml.DecodeFile(config.InitConfPath, &config.InitConf)
 	if err != nil {
 		return nil, err
 	}
@@ -81,7 +93,7 @@ func LoadConfig[T any](config *ServiceConfig[T]) (*etclient.Client, error) {
 		return nil, err
 	}
 	// initialize config for current service
-	configV, err := etclientIns.GetRawKey(config.Name + "/config")
+	configV, err := etclientIns.GetRawKey(config.InitConf.Name + "/config")
 	if err != nil && err != etclient.ErrNotExist {
 		return nil, err
 	}

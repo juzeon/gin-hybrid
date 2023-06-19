@@ -1,6 +1,7 @@
-package service
+package main
 
 import (
+	"gin-hybrid/data/dto"
 	"gin-hybrid/pkg/app"
 	"gin-hybrid/pkg/util"
 )
@@ -12,11 +13,7 @@ func NewUserService() *UserService {
 	return &UserService{}
 }
 func (u UserService) Login(aw *app.Wrapper) app.Result {
-	type UserLoginReq struct {
-		Username string `form:"username" binding:"required"`
-		Password string `form:"password" binding:"required"`
-	}
-	var req UserLoginReq
+	var req dto.UserLoginReq
 	if err := aw.Ctx.ShouldBind(&req); err != nil {
 		return aw.Error(err.Error())
 	}
@@ -31,6 +28,9 @@ func (u UserService) Me(aw *app.Wrapper) app.Result {
 	uc := aw.ExtractUserClaims()
 	return aw.Success(uc)
 }
-func (u UserService) ExampleCall(aw *app.Wrapper) app.Result {
-	return aw.Success("This is an example API call.")
+func (u UserService) ExampleGet(aw *app.Wrapper) app.Result {
+	return aw.Success("This is an example GET call: " + aw.Ctx.Query("example"))
+}
+func (u UserService) ExamplePost(aw *app.Wrapper) app.Result {
+	return aw.Success("This is an example POST call: " + aw.Ctx.PostForm("example"))
 }
