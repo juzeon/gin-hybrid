@@ -153,7 +153,7 @@ func (s *Service) convertStructToMap(data any) map[string]string {
 }
 func (s *Service) GetEndpointRandomly() (string, error) {
 	if len(s.Endpoints) == 0 {
-		return "", errors.New("no available service")
+		return "", errors.New("no available service: " + s.Name)
 	}
 	i := rand.Intn(len(s.Endpoints))
 	for _, v := range s.Endpoints {

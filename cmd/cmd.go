@@ -19,7 +19,7 @@ func Entry(entryConfig EntryConfig, registerFunc func(engine *gin.Engine, api *g
 	engine.Use(gin.Logger(), nice.Recovery(router.RecoveryFunc))
 	api := engine.Group("/api")
 	registerFunc(engine, api)
-	router.Setup(engine)
+	router.Setup(engine, false)
 	err := engine.Run(fmt.Sprintf(":%v", entryConfig.Port))
 	if err != nil {
 		panic(err)

@@ -6,6 +6,7 @@ import (
 	"gin-hybrid/middleware"
 	"gin-hybrid/rest"
 	"gin-hybrid/router"
+	"gin-hybrid/service"
 	"github.com/gin-gonic/gin"
 )
 
@@ -19,7 +20,7 @@ func main() {
 }
 
 func getAPIRouters(userService *rest.Service) []router.APIRouter {
-	srv := NewArticleService(userService)
+	srv := service.NewArticleService(userService)
 	apiRouters := []router.APIRouter{
 		{
 			Method:   "post",

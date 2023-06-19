@@ -24,7 +24,8 @@ func (p *ProxyRouter) Handler(c *gin.Context) {
 	}
 	u, err := url.Parse("http://" + endpoint)
 	if err != nil {
-		panic(err)
+		aw.ErrorWithCode(503, err.Error()).SendJSON()
+		return
 	}
 	proxy := httputil.NewSingleHostReverseProxy(u)
 	proxy.ServeHTTP(c.Writer, c.Request)

@@ -179,7 +179,7 @@ func RegisterWebRouters(webRouters []WebRouter, e *gin.Engine) {
 	}
 }
 
-func Setup(e *gin.Engine) {
+func Setup(e *gin.Engine, enableWebRouters bool) {
 	e.Use(func(ctx *gin.Context) {
 		if ctx.GetHeader("Authorization") != "" {
 			return
@@ -188,9 +188,11 @@ func Setup(e *gin.Engine) {
 			ctx.Request.Header.Set("Authorization", token)
 		}
 	})
-	e.HTMLRender = loadTemplates()
-	e.Static("/static", "web/static")
-	RegisterWebRouters(GetWebRouters(), e)
+	if enableWebRouters {
+		e.HTMLRender = loadTemplates()
+		e.Static("/static", "web/static")
+		RegisterWebRouters(GetWebRouters(), e)
+	}
 }
 func loadTemplates() multitemplate.Renderer {
 	r := multitemplate.NewRenderer()
