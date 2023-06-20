@@ -11,9 +11,10 @@ import (
 
 func main() {
 	srvConf := conf.MustNewServiceConfig[conf.User]()
-	cmd.Entry(cmd.EntryConfig{Port: srvConf.SelfConf.Port}, func(engine *gin.Engine, api *gin.RouterGroup) {
-		router.RegisterAPIRouters(getAPIRouters(), api, srvConf)
-	})
+	cmd.Entry(cmd.EntryConfig{Port: srvConf.SelfConf.Port},
+		func(engine *gin.Engine, api *gin.RouterGroup) {
+			router.RegisterAPIRouters(getAPIRouters(), api, srvConf)
+		})
 }
 
 func getAPIRouters() []router.APIRouter {

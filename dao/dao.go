@@ -12,12 +12,12 @@ import (
 	"time"
 )
 
-func MustSetup[T any](srvConf *conf.ServiceConfig[T]) (*gorm.DB, error) {
+func MustSetup[T any](srvConf *conf.ServiceConfig[T]) *gorm.DB {
 	db, err := Setup(srvConf)
 	if err != nil {
 		panic(err)
 	}
-	return db, nil
+	return db
 }
 func Setup[T any](srvConf *conf.ServiceConfig[T]) (*gorm.DB, error) {
 	newLogger := logger.New(

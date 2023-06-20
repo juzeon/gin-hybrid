@@ -14,9 +14,10 @@ func main() {
 	srvConf := conf.MustNewServiceConfig[conf.Article]()
 	restClient := rest.NewClient(srvConf)
 	userService := restClient.MustAddServiceDependency("user")
-	cmd.Entry(cmd.EntryConfig{Port: srvConf.SelfConf.Port}, func(engine *gin.Engine, api *gin.RouterGroup) {
-		router.RegisterAPIRouters(getAPIRouters(userService), api, srvConf)
-	})
+	cmd.Entry(cmd.EntryConfig{Port: srvConf.SelfConf.Port},
+		func(engine *gin.Engine, api *gin.RouterGroup) {
+			router.RegisterAPIRouters(getAPIRouters(userService), api, srvConf)
+		})
 }
 
 func getAPIRouters(userService *rest.Service) []router.APIRouter {

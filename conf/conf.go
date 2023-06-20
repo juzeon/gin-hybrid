@@ -2,9 +2,11 @@ package conf
 
 import (
 	"flag"
+	"gin-hybrid/dao"
 	"gin-hybrid/etclient"
 	"github.com/BurntSushi/toml"
 	clientv3 "go.etcd.io/etcd/client/v3"
+	"gorm.io/gorm"
 	"log"
 	"reflect"
 )
@@ -42,6 +44,7 @@ type ServiceConfig[T any] struct {
 	SelfConf     T
 	Etclient     *etclient.Client
 	InitConfPath string
+	DB           *gorm.DB
 }
 
 func MustNewServiceConfig[T any]() *ServiceConfig[T] {
@@ -61,6 +64,11 @@ func NewServiceConfig[T any]() (*ServiceConfig[T], error) {
 		return nil, err
 	}
 	srvConf.Etclient = etclientIns
+	db, err := dao.Setup(srvConf)
+	if err != nil {
+		return nil, err
+	}
+	srvConf.DB = db
 	return srvConf, nil
 }
 
