@@ -6,13 +6,11 @@ import (
 	"time"
 )
 
-const (
-	JWTSecret = "fee516aa-8f5b-4248-a80c-bf467d40fd62"
-)
+var jwtSecret string
 
 func ParseJWT(token string) (*dto.UserClaims, error) {
 	tokenClaims, err := jwt.ParseWithClaims(token, &dto.UserClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(JWTSecret), nil
+		return []byte(jwtSecret), nil
 	})
 	if err != nil {
 		return nil, err
@@ -24,6 +22,7 @@ func ParseJWT(token string) (*dto.UserClaims, error) {
 	}
 	return nil, err
 }
+
 func GenerateJWT(userID int, roleID int, roleName string) string {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, dto.UserClaims{
 		UserID:         userID,
@@ -32,7 +31,7 @@ func GenerateJWT(userID int, roleID int, roleName string) string {
 		LoginTime:      time.Now(),
 		StandardClaims: jwt.StandardClaims{},
 	})
-	str, err := token.SignedString([]byte(JWTSecret))
+	str, err := token.SignedString([]byte(jwtSecret))
 	if err != nil {
 		panic(err)
 	}

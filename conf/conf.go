@@ -4,6 +4,7 @@ import (
 	"flag"
 	"gin-hybrid/dao"
 	"gin-hybrid/etclient"
+	"gin-hybrid/pkg/util"
 	"github.com/BurntSushi/toml"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"gorm.io/gorm"
@@ -24,8 +25,9 @@ type Etcd struct {
 }
 
 type Parent struct {
-	RPCKey string   `toml:"rpc-key"`
-	DB     ParentDB `toml:"db"`
+	RPCKey    string   `toml:"rpc-key"`
+	JWTSecret string   `toml:"jwt-secret"`
+	DB        ParentDB `toml:"db"`
 }
 type ParentDB struct {
 	Driver string `toml:"driver"`
@@ -75,6 +77,7 @@ func NewServiceConfig[T any]() (*ServiceConfig[T], error) {
 		return nil, err
 	}
 	srvConf.DB = db
+	util.Setup(util.SetupConf{JWTSecret: srvConf.ParentConf.JWTSecret})
 	return srvConf, nil
 }
 
