@@ -105,7 +105,7 @@ func (s *Service) Call(method string, path string, data any) (any, error) {
 		case reflect.Map:
 			valuesTmp := dataValue.Interface().(map[string]any)
 			for k, v := range valuesTmp {
-				values[k] = fmt.Sprintf("%v", v)
+				values[k] = fmt.Sprintf("%s", v)
 			}
 		case reflect.Struct:
 			values = s.convertStructToMap(dataValue.Interface())
@@ -145,7 +145,7 @@ func (s *Service) convertStructToMap(data any) map[string]string {
 			tag = ft.Name
 		}
 		// Convert the field value to an interface{}
-		fvi := fmt.Sprintf("%v", fv.Interface())
+		fvi := fmt.Sprintf("%s", fv.Interface())
 		// Store the key-value pair in the result map
 		result[tag] = fvi
 	}
