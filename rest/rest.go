@@ -125,6 +125,10 @@ func (s *Service) Call(method string, path string, data any) (any, error) {
 		return "", errors.New("failed to call remote api with status code " + strconv.Itoa(resp.StatusCode()) +
 			": " + result.Msg)
 	}
+	if result.Code != 0 {
+		return "", errors.New("failed to call remote api with JSON code " + strconv.Itoa(result.Code) +
+			": " + result.Msg)
+	}
 	return result.Data, nil
 }
 func (s *Service) convertStructToMap(data any) map[string]string {
