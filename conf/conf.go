@@ -64,7 +64,13 @@ func NewServiceConfig[T any]() (*ServiceConfig[T], error) {
 		return nil, err
 	}
 	srvConf.Etclient = etclientIns
-	db, err := dao.Setup(srvConf)
+	db, err := dao.Setup(dao.SetupConf{
+		User: srvConf.ParentConf.DB.User,
+		Pass: srvConf.ParentConf.DB.Pass,
+		Host: srvConf.ParentConf.DB.Host,
+		Port: srvConf.ParentConf.DB.Port,
+		DB:   srvConf.ParentConf.DB.DB,
+	})
 	if err != nil {
 		return nil, err
 	}

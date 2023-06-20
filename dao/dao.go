@@ -3,7 +3,6 @@ package dao
 import (
 	"errors"
 	"fmt"
-	"gin-hybrid/conf"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -12,14 +11,22 @@ import (
 	"time"
 )
 
-func MustSetup[T any](srvConf *conf.ServiceConfig[T]) *gorm.DB {
-	db, err := Setup(srvConf)
+type SetupConf struct {
+	User string
+	Pass string
+	Host string
+	Port int
+	DB   string
+}
+
+func MustSetup(setupConf SetupConf) *gorm.DB {
+	db, err := Setup(setupConf)
 	if err != nil {
 		panic(err)
 	}
 	return db
 }
-func Setup[T any](srvConf *conf.ServiceConfig[T]) (*gorm.DB, error) {
+func Setup(setupConf SetupConf) (*gorm.DB, error) {
 	newLogger := logger.New(
 		log.New(os.Stdout, "\r\n", log.LstdFlags), // io writer
 		logger.Config{
@@ -32,11 +39,11 @@ func Setup[T any](srvConf *conf.ServiceConfig[T]) (*gorm.DB, error) {
 	opts := &gorm.Config{}
 	opts.Logger = newLogger
 	db, err := gorm.Open(mysql.Open(fmt.Sprintf("%v:%v@tcp(%v:%v)/%v?charset=utf8mb4&parseTime=True&loc=Local",
-		srvConf.ParentConf.DB.User,
-		srvConf.ParentConf.DB.Pass,
-		srvConf.ParentConf.DB.Host,
-		srvConf.ParentConf.DB.Port,
-		srvConf.ParentConf.DB.DB)), opts)
+		setupConf.User,
+		setupConf.Pass,
+		setupConf.Host,
+		setupConf.Port,
+		setupConf.DB)), opts)
 	if err != nil {
 		return nil, errors.New("cannot connect to database")
 	}
