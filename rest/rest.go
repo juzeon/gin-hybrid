@@ -75,14 +75,14 @@ type Service struct {
 	rpcKey       string
 }
 
-func (s *Service) MustCall(method string, path string, data any) any {
-	res, err := s.Call(method, path, data)
+func (s *Service) MustCall(method string, path string, data any, jwt string) any {
+	res, err := s.Call(method, path, data, jwt)
 	if err != nil {
 		panic(err)
 	}
 	return res
 }
-func (s *Service) Call(method string, path string, data any) (any, error) {
+func (s *Service) Call(method string, path string, data any, jwt string) (any, error) {
 	method = strings.ToUpper(method)
 	if !strings.HasPrefix(path, "/") {
 		return "", errors.New("path must start with `/`")
@@ -95,6 +95,9 @@ func (s *Service) Call(method string, path string, data any) (any, error) {
 	req.Method = method
 	req.URL = "http://" + endpoint + "/api/" + s.Name + path
 	req.SetHeader("X-RPC-Key", s.rpcKey)
+	if jwt != "" {
+		req.SetHeader("Authorization", "Bearer "+jwt)
+	}
 	if data != nil {
 		dataValue := reflect.ValueOf(data)
 		if dataValue.Kind() == reflect.Pointer {

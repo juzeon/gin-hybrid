@@ -16,5 +16,6 @@ func Auth(aw *app.Wrapper) app.Result {
 		return aw.Error("Login Required")
 	}
 	aw.Ctx.Set("userClaims", claims)
+	aw.Ctx.Set("jwt", authHeader)
 	return aw.OK()
 }

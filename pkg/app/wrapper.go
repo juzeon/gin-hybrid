@@ -112,6 +112,13 @@ func (w Wrapper) ErrorWithCode(code int, msg string) Result {
 func (w Wrapper) GetIP() string {
 	return w.Ctx.ClientIP()
 }
+func (w Wrapper) ExtractJWT() string {
+	jwt, exist := w.Ctx.Get("jwt")
+	if !exist {
+		panic("jwt not exists")
+	}
+	return jwt.(string)
+}
 func (w Wrapper) ExtractUserClaims() *dto.UserClaims {
 	raw, exist := w.Ctx.Get("userClaims")
 	if !exist {
