@@ -91,11 +91,12 @@ func (t *TxWrapper[T]) MustFindMany(conditions ...any) []T {
 	}
 	return arr
 }
-func (t *TxWrapper[T]) MustCreate(obj *T) {
+func (t *TxWrapper[T]) MustCreate(obj *T) *T {
 	err := t.Tx.Create(&obj).Error
 	if err != nil {
 		panic(err)
 	}
+	return obj
 }
 func (t *TxWrapper[T]) MustCreateMany(arr []T) {
 	err := t.Tx.Create(&arr).Error
