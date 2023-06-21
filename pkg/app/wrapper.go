@@ -3,20 +3,23 @@ package app
 import (
 	"gin-hybrid/data/dto"
 	"github.com/gin-gonic/gin"
+	"io"
 	"runtime"
 	"time"
 )
 
 type Result struct {
-	Code                int           `json:"code"`
-	Msg                 string        `json:"msg,omitempty"`
-	Line                int           `json:"line,omitempty"`
-	File                string        `json:"file,omitempty"`
-	Data                interface{}   `json:"data,omitempty"`
-	Duration            time.Duration `json:"duration,omitempty"`
-	wrapper             *Wrapper
-	ResponseContentType string   `json:"-"`
-	Redirect            redirect `json:"-"`
+	Code                  int           `json:"code"`
+	Msg                   string        `json:"msg,omitempty"`
+	Line                  int           `json:"line,omitempty"`
+	File                  string        `json:"file,omitempty"`
+	Data                  interface{}   `json:"data,omitempty"`
+	Duration              time.Duration `json:"duration,omitempty"`
+	wrapper               *Wrapper
+	ResponseContentType   string    `json:"-"`
+	ResponseContentLength int64     `json:"-"`
+	Reader                io.Reader `json:"-"`
+	Redirect              redirect  `json:"-"`
 }
 type redirect struct {
 	Code     int
@@ -65,13 +68,15 @@ func (w Wrapper) OK() Result {
 		wrapper: &w,
 	}
 }
-func (w Wrapper) SuccessWithRawData(data []byte, contentType string) Result {
+func (w Wrapper) SuccessWithRawData(reader io.Reader, contentLength int64, contentType string) Result {
 	return Result{
-		Code:                0,
-		Msg:                 "",
-		Data:                data,
-		wrapper:             &w,
-		ResponseContentType: contentType,
+		Code:                  0,
+		Msg:                   "",
+		Data:                  nil,
+		wrapper:               &w,
+		ResponseContentType:   contentType,
+		ResponseContentLength: contentLength,
+		Reader:                reader,
 	}
 }
 func (w Wrapper) Success(data interface{}) Result {

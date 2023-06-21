@@ -63,7 +63,8 @@ func RegisterAPIRouters[T any](apiRouters []APIRouter, api *gin.RouterGroup, con
 			}
 			result.Duration = time.Now().Sub(t)
 			if result.ResponseContentType != "" {
-				ctx.Data(200, result.ResponseContentType, result.Data.([]byte))
+				ctx.DataFromReader(200, result.ResponseContentLength, result.ResponseContentType, result.Reader,
+					map[string]string{})
 			} else {
 				ctx.JSON(result.GetResponseCode(), result)
 			}
