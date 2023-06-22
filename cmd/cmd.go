@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"gin-hybrid/middleware"
 	"gin-hybrid/router"
 	nice "github.com/ekyoung/gin-nice-recovery"
 	"github.com/gin-gonic/gin"
@@ -17,6 +18,7 @@ func Entry(entryConfig EntryConfig, registerFunc func(engine *gin.Engine, api *g
 	rand.Seed(time.Now().Unix())
 	engine := gin.New()
 	engine.Use(gin.Logger(), nice.Recovery(router.RecoveryFunc))
+	engine.Use(middleware.Cors())
 	api := engine.Group("/api")
 	registerFunc(engine, api)
 	router.Setup(engine, false)
