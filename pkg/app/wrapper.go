@@ -109,6 +109,28 @@ func (w Wrapper) ErrorWithCode(code int, msg string) Result {
 		wrapper: &w,
 	}
 }
+func (w Wrapper) ErrorNotFound() Result {
+	_, file, n, _ := runtime.Caller(1)
+	return Result{
+		Code:    404,
+		Msg:     "requested resource is not found",
+		Line:    n,
+		File:    file,
+		Data:    nil,
+		wrapper: &w,
+	}
+}
+func (w Wrapper) ErrorNoPermission() Result {
+	_, file, n, _ := runtime.Caller(1)
+	return Result{
+		Code:    403,
+		Msg:     "no permission to access requested resource",
+		Line:    n,
+		File:    file,
+		Data:    nil,
+		wrapper: &w,
+	}
+}
 func (w Wrapper) GetIP() string {
 	return w.Ctx.ClientIP()
 }
