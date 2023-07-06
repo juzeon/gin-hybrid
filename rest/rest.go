@@ -1,11 +1,11 @@
 package rest
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"gin-hybrid/conf"
 	"gin-hybrid/etclient"
-	"gin-hybrid/pkg/app"
 	"github.com/go-resty/resty/v2"
 	clientv3 "go.etcd.io/etcd/client/v3"
 	"log"
@@ -75,23 +75,32 @@ type Service struct {
 	rpcKey       string
 }
 
-func (s *Service) MustCall(method string, path string, data any, jwt string) any {
-	res, err := s.Call(method, path, data, jwt)
+func (s *Service) MustCall(v any, method string, path string, data any, jwt string) {
+	err := s.Call(v, method, path, data, jwt)
 	if err != nil {
 		panic(err)
 	}
-	return res
 }
-func (s *Service) Call(method string, path string, data any, jwt string) (any, error) {
+
+type Result struct {
+	Code int    `json:"code"`
+	Msg  string `json:"msg,omitempty"`
+	Data []byte `json:"data,omitempty"`
+}
+
+func (s *Service) Call(v any, method string, path string, data any, jwt string) error {
 	method = strings.ToUpper(method)
 	if !strings.HasPrefix(path, "/") {
-		return "", errors.New("path must start with `/`")
+		return errors.New("path must start with `/`")
+	}
+	if reflect.TypeOf(v).Kind() != reflect.Pointer {
+		return errors.New("v must be a pointer")
 	}
 	endpoint, err := s.GetEndpointRandomly()
 	if err != nil {
-		return "", err
+		return err
 	}
-	req := s.httpClient.R().SetResult(&app.Result{})
+	req := s.httpClient.R().SetResult(&Result{})
 	req.Method = method
 	req.URL = "http://" + endpoint + "/api/" + s.Name + path
 	req.SetHeader("X-RPC-Key", s.rpcKey)
@@ -121,18 +130,22 @@ func (s *Service) Call(method string, path string, data any, jwt string) (any, e
 	}
 	resp, err := req.Send()
 	if err != nil {
-		return "", errors.New("failed to call remote api: " + err.Error())
+		return errors.New("failed to call remote api: " + err.Error())
 	}
-	result := resp.Result().(*app.Result)
+	result := resp.Result().(*Result)
 	if resp.StatusCode() > 399 {
-		return "", errors.New("failed to call remote api with status code " + strconv.Itoa(resp.StatusCode()) +
+		return errors.New("failed to call remote api with status code " + strconv.Itoa(resp.StatusCode()) +
 			": " + result.Msg)
 	}
 	if result.Code != 0 {
-		return "", errors.New("failed to call remote api with JSON code " + strconv.Itoa(result.Code) +
+		return errors.New("failed to call remote api with JSON code " + strconv.Itoa(result.Code) +
 			": " + result.Msg)
 	}
-	return result.Data, nil
+	err = json.Unmarshal(result.Data, v)
+	if err != nil {
+		return errors.New("failed to unmarshal json of result.Data: " + err.Error())
+	}
+	return nil
 }
 func (s *Service) convertStructToMap(data any) map[string]string {
 	// Create an empty map to store the result
