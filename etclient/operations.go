@@ -28,6 +28,14 @@ func (c *Client) PutRawKey(key string, value string, opts ...clientv3.OpOption) 
 	_, err := c.client.Put(context.Background(), c.withKeyNamespace(key), value, opts...)
 	return err
 }
+func (c *Client) PutRawKeyWithTTL(key string, value string, ttl int, opts ...clientv3.OpOption) error {
+	leaseResp, err := c.client.Lease.Grant(context.Background(), int64(ttl))
+	if err != nil {
+		return err
+	}
+	opts = append(opts, clientv3.WithLease(leaseResp.ID))
+	return c.PutRawKey(key, value, opts...)
+}
 func (c *Client) WatchKey(key string, opts ...clientv3.OpOption) clientv3.WatchChan {
 	return c.client.Watch(context.Background(), c.withKeyNamespace(key), opts...)
 }
