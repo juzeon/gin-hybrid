@@ -36,6 +36,10 @@ func (c *Client) PutRawKeyWithTTL(key string, value string, ttl int, opts ...cli
 	opts = append(opts, clientv3.WithLease(leaseResp.ID))
 	return c.PutRawKey(key, value, opts...)
 }
+func (c *Client) DeleteKey(key string, opts ...clientv3.OpOption) error {
+	_, err := c.client.Delete(context.Background(), key, opts...)
+	return err
+}
 func (c *Client) WatchKey(key string, opts ...clientv3.OpOption) clientv3.WatchChan {
 	return c.client.Watch(context.Background(), c.withKeyNamespace(key), opts...)
 }
