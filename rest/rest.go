@@ -83,9 +83,9 @@ func (s *Service) MustCall(v any, method string, path string, data any, jwt stri
 }
 
 type Result struct {
-	Code int    `json:"code"`
-	Msg  string `json:"msg,omitempty"`
-	Data []byte `json:"data,omitempty"`
+	Code int             `json:"code"`
+	Msg  string          `json:"msg,omitempty"`
+	Data json.RawMessage `json:"data,omitempty"`
 }
 
 func (s *Service) Call(v any, method string, path string, data any, jwt string) error {
@@ -100,7 +100,7 @@ func (s *Service) Call(v any, method string, path string, data any, jwt string) 
 	if err != nil {
 		return err
 	}
-	req := s.httpClient.R().SetResult(&Result{})
+	req := s.httpClient.R()
 	req.Method = method
 	req.URL = "http://" + endpoint + "/api/" + s.Name + path
 	req.SetHeader("X-RPC-Key", s.rpcKey)
@@ -117,7 +117,7 @@ func (s *Service) Call(v any, method string, path string, data any, jwt string) 
 		case reflect.Map:
 			valuesTmp := dataValue.Interface().(map[string]any)
 			for k, v := range valuesTmp {
-				values[k] = fmt.Sprintf("%s", v)
+				values[k] = fmt.Sprintf("%v", v)
 			}
 		case reflect.Struct:
 			values = s.convertStructToMap(dataValue.Interface())
@@ -132,7 +132,11 @@ func (s *Service) Call(v any, method string, path string, data any, jwt string) 
 	if err != nil {
 		return errors.New("failed to call remote api: " + err.Error())
 	}
-	result := resp.Result().(*Result)
+	var result Result
+	err = json.Unmarshal(resp.Body(), &result)
+	if err != nil {
+		return errors.New("failed to unmarshal json of result: " + err.Error())
+	}
 	if resp.StatusCode() > 399 {
 		return errors.New("failed to call remote api with status code " + strconv.Itoa(resp.StatusCode()) +
 			": " + result.Msg)
@@ -165,7 +169,7 @@ func (s *Service) convertStructToMap(data any) map[string]string {
 			tag = ft.Name
 		}
 		// Convert the field value to an interface{}
-		fvi := fmt.Sprintf("%s", fv.Interface())
+		fvi := fmt.Sprintf("%v", fv.Interface())
 		// Store the key-value pair in the result map
 		result[tag] = fvi
 	}
