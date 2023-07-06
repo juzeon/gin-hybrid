@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gin-hybrid/cmd"
 	"gin-hybrid/conf"
+	"gin-hybrid/middleware"
 	"gin-hybrid/rest"
 	"gin-hybrid/router"
 	"github.com/gin-gonic/gin"
@@ -17,6 +18,7 @@ func main() {
 	fmt.Printf("%#v\n", srvConf)
 	cmd.Entry(cmd.EntryConfig{Port: srvConf.SelfConf.Port},
 		func(engine *gin.Engine, api *gin.RouterGroup) {
+			engine.Use(middleware.Cors())
 			router.RegisterReverseProxy(userService, api.Group("/user"))
 			router.RegisterReverseProxy(articleService, api.Group("/article"))
 		})
