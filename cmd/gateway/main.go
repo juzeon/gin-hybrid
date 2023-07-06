@@ -18,7 +18,7 @@ func main() {
 	fmt.Printf("%#v\n", srvConf)
 	cmd.Entry(cmd.EntryConfig{Port: srvConf.SelfConf.Port},
 		func(engine *gin.Engine, api *gin.RouterGroup) {
-			engine.Use(middleware.Cors())
+			api.Use(middleware.Cors())
 			router.RegisterReverseProxy(userService, api.Group("/user"))
 			router.RegisterReverseProxy(articleService, api.Group("/article"))
 		})
