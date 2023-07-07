@@ -93,8 +93,8 @@ func (s *Service) Call(v any, method string, path string, data any, jwt string) 
 	if !strings.HasPrefix(path, "/") {
 		return errors.New("path must start with `/`")
 	}
-	if reflect.TypeOf(v).Kind() != reflect.Pointer {
-		return errors.New("v must be a pointer")
+	if v != nil && reflect.TypeOf(v).Kind() != reflect.Pointer {
+		return errors.New("v must be a pointer or nil")
 	}
 	endpoint, err := s.GetEndpointRandomly()
 	if err != nil {
@@ -145,7 +145,9 @@ func (s *Service) Call(v any, method string, path string, data any, jwt string) 
 		return errors.New("failed to call remote api with JSON code " + strconv.Itoa(result.Code) +
 			": " + result.Msg)
 	}
-	err = json.Unmarshal(result.Data, v)
+	if v != nil {
+		err = json.Unmarshal(result.Data, v)
+	}
 	if err != nil {
 		return errors.New("failed to unmarshal json of result.Data: " + err.Error())
 	}
