@@ -16,10 +16,11 @@ type Result struct {
 	Data                  interface{}   `json:"data,omitempty"`
 	Duration              time.Duration `json:"duration,omitempty"`
 	wrapper               *Wrapper
-	ResponseContentType   string    `json:"-"`
-	ResponseContentLength int64     `json:"-"`
-	Reader                io.Reader `json:"-"`
-	Redirect              redirect  `json:"-"`
+	ResponseContentType   string            `json:"-"`
+	ResponseContentLength int64             `json:"-"`
+	Reader                io.Reader         `json:"-"`
+	ExtraHeaders          map[string]string `json:"-"`
+	Redirect              redirect          `json:"-"`
 }
 type redirect struct {
 	Code     int
@@ -68,7 +69,7 @@ func (w Wrapper) OK() Result {
 		wrapper: &w,
 	}
 }
-func (w Wrapper) SuccessWithRawData(reader io.Reader, contentLength int64, contentType string) Result {
+func (w Wrapper) SuccessWithRawData(reader io.Reader, contentLength int64, contentType string, extraHeaders map[string]string) Result {
 	return Result{
 		Code:                  0,
 		Msg:                   "",
@@ -77,6 +78,7 @@ func (w Wrapper) SuccessWithRawData(reader io.Reader, contentLength int64, conte
 		ResponseContentType:   contentType,
 		ResponseContentLength: contentLength,
 		Reader:                reader,
+		ExtraHeaders:          extraHeaders,
 	}
 }
 func (w Wrapper) Success(data interface{}) Result {
