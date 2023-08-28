@@ -1,1 +1,4 @@
 ﻿.idea
+cmd/article/config.toml
+cmd/gateway/config.toml
+cmd/user/config.toml
