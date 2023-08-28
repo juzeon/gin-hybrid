@@ -3,20 +3,24 @@ package app
 import (
 	"gin-hybrid/data/dto"
 	"github.com/gin-gonic/gin"
+	"io"
 	"runtime"
 	"time"
 )
 
 type Result struct {
-	Code                int           `json:"code"`
-	Msg                 string        `json:"msg,omitempty"`
-	Line                int           `json:"line,omitempty"`
-	File                string        `json:"file,omitempty"`
-	Data                interface{}   `json:"data,omitempty"`
-	Duration            time.Duration `json:"duration,omitempty"`
-	wrapper             *Wrapper
-	ResponseContentType string   `json:"-"`
-	Redirect            redirect `json:"-"`
+	Code                  int           `json:"code"`
+	Msg                   string        `json:"msg,omitempty"`
+	Line                  int           `json:"line,omitempty"`
+	File                  string        `json:"file,omitempty"`
+	Data                  interface{}   `json:"data,omitempty"`
+	Duration              time.Duration `json:"duration,omitempty"`
+	wrapper               *Wrapper
+	ResponseContentType   string            `json:"-"`
+	ResponseContentLength int64             `json:"-"`
+	Reader                io.Reader         `json:"-"`
+	ExtraHeaders          map[string]string `json:"-"`
+	Redirect              redirect          `json:"-"`
 }
 type redirect struct {
 	Code     int
@@ -65,13 +69,16 @@ func (w Wrapper) OK() Result {
 		wrapper: &w,
 	}
 }
-func (w Wrapper) SuccessWithRawData(data []byte, contentType string) Result {
+func (w Wrapper) SuccessWithRawData(reader io.Reader, contentLength int64, contentType string, extraHeaders map[string]string) Result {
 	return Result{
-		Code:                0,
-		Msg:                 "",
-		Data:                data,
-		wrapper:             &w,
-		ResponseContentType: contentType,
+		Code:                  0,
+		Msg:                   "",
+		Data:                  nil,
+		wrapper:               &w,
+		ResponseContentType:   contentType,
+		ResponseContentLength: contentLength,
+		Reader:                reader,
+		ExtraHeaders:          extraHeaders,
 	}
 }
 func (w Wrapper) Success(data interface{}) Result {
@@ -104,8 +111,37 @@ func (w Wrapper) ErrorWithCode(code int, msg string) Result {
 		wrapper: &w,
 	}
 }
+func (w Wrapper) ErrorNotFound(resource string) Result {
+	_, file, n, _ := runtime.Caller(1)
+	return Result{
+		Code:    404,
+		Msg:     "requested resource `" + resource + "` is not found",
+		Line:    n,
+		File:    file,
+		Data:    nil,
+		wrapper: &w,
+	}
+}
+func (w Wrapper) ErrorNoPermission(resource string) Result {
+	_, file, n, _ := runtime.Caller(1)
+	return Result{
+		Code:    403,
+		Msg:     "no permission to access requested resource `" + resource + "`",
+		Line:    n,
+		File:    file,
+		Data:    nil,
+		wrapper: &w,
+	}
+}
 func (w Wrapper) GetIP() string {
 	return w.Ctx.ClientIP()
+}
+func (w Wrapper) ExtractJWT() string {
+	jwt, exist := w.Ctx.Get("jwt")
+	if !exist {
+		panic("jwt not exists")
+	}
+	return jwt.(string)
 }
 func (w Wrapper) ExtractUserClaims() *dto.UserClaims {
 	raw, exist := w.Ctx.Get("userClaims")

@@ -52,8 +52,9 @@ func RegisterAPIRouters(apiRouters []APIRouter, g *gin.RouterGroup) {
 				}
 			}
 			result.Duration = time.Now().Sub(t)
-			if result.ResponseContentType != "" {
-				ctx.Data(200, result.ResponseContentType, result.Data.([]byte))
+			if result.Reader != nil {
+				ctx.DataFromReader(200, result.ResponseContentLength, result.ResponseContentType, result.Reader,
+					result.ExtraHeaders)
 			} else {
 				ctx.JSON(result.GetResponseCode(), result)
 			}
@@ -63,10 +64,20 @@ func RegisterAPIRouters(apiRouters []APIRouter, g *gin.RouterGroup) {
 			g.GET(apiRouter.Path, commonHandler)
 		case "post":
 			g.POST(apiRouter.Path, commonHandler)
+		case "put":
+			g.PUT(apiRouter.Path, commonHandler)
+		case "delete":
+			g.DELETE(apiRouter.Path, commonHandler)
+		case "patch":
+			g.PATCH(apiRouter.Path, commonHandler)
+		case "head":
+			g.HEAD(apiRouter.Path, commonHandler)
+		case "options":
+			g.OPTIONS(apiRouter.Path, commonHandler)
 		default:
 			panic("method " + apiRouter.Method + " not found")
 		}
-		PathAPIRouterMap[g.BasePath()+apiRouter.Path] = apiRouter
+		PathAPIRouterMap[apiRouter.Method+":"+g.BasePath()+apiRouter.Path] = apiRouter
 	}
 }
 func RegisterWebRouters(webRouters []WebRouter, e *gin.Engine) {
