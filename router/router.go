@@ -2,6 +2,7 @@ package router
 
 import (
 	"fmt"
+	"gin-hybrid/data/cnt"
 	"gin-hybrid/data/dto"
 	"gin-hybrid/pkg/app"
 	"github.com/gin-contrib/multitemplate"
@@ -181,9 +182,11 @@ func Setup(e *gin.Engine) {
 	api := e.Group("/api")
 	RegisterAPIRouters(GetUserAPIRouters(), api.Group("/user"))
 
-	e.HTMLRender = loadTemplates()
-	e.Static("/static", "web/static")
-	RegisterWebRouters(GetWebRouters(), e)
+	if !cnt.DisableWebRouter {
+		e.HTMLRender = loadTemplates()
+		e.Static("/static", "web/static")
+		RegisterWebRouters(GetWebRouters(), e)
+	}
 }
 func loadTemplates() multitemplate.Renderer {
 	r := multitemplate.NewRenderer()
