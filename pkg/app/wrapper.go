@@ -3,6 +3,7 @@ package app
 import (
 	"gin-hybrid/data/dto"
 	"github.com/gin-gonic/gin"
+	"github.com/pkierski/niltoempty"
 	"io"
 	"runtime"
 	"time"
@@ -85,7 +86,7 @@ func (w Wrapper) Success(data interface{}) Result {
 	return Result{
 		Code:    0,
 		Msg:     "",
-		Data:    data,
+		Data:    niltoempty.Initialize(&data),
 		wrapper: &w,
 	}
 }
